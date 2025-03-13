@@ -1,0 +1,26 @@
+name = "TensorNetworkQuantumSimulator"
+uuid = "4de3b72a-362e-43dd-83ff-3f381eda9f9c"
+authors = ["JoeyT1994", "MSRudolph <manuel.rudolph@web.de>"]
+version = "0.0.0"
+
+[deps]
+Dictionaries = "85a47980-9c8c-11e8-2b9f-f7ca1fa99fb4"
+EinExprs = "b1794770-133b-4de1-afb4-526377e9f4c5"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+ITensorNetworks = "2919e153-833c-4bdc-8836-1ea460a35fc7"
+ITensors = "9136182c-28ba-11e9-034c-db9fb085ebd5"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+NamedGraphs = "678767b0-92e7-4007-89e4-4527a8725b19"
+PauliPropagation = "293282d5-3c99-4fb6-92d0-fd3280a19750"
+ProfileSVG = "132c30aa-f267-4189-9183-c8a63c7e05e6"
+
+[compat]
+Dictionaries = "0.4.4"
+EinExprs = "0.6.8"
+Graphs = "1.12.0"
+ITensorNetworks = "0.11.26"
+ITensors = "0.8.0"
+LinearAlgebra = "1.11.0"
+NamedGraphs = "0.6.4"
+PauliPropagation = "0.1.1"
+ProfileSVG = "0.2.2"
