@@ -7,7 +7,13 @@ function expect(tn1::ITensorNetwork, tn2::ITensorNetwork; imag_tol=1e-14)
 end
 
 
-function expect(tn::ITensorNetwork, obs::Tuple; max_loop_size=0, imag_tol=1e-14)
+function expect(ψ::ITensorNetwork, obs; bp_update_kwargs=_default_bp_update_kwargs, kwargs...)
+    ## this is the entry point for when the state network is passed, and not the BP cache 
+    ψIψ = build_bp_cache(ψ; bp_update_kwargs...)
+    return expect(ψIψ, obs; bp_update_kwargs, kwargs...)
+end
+
+function expect(ψIψ::BeliefPropagationCache, obs::Tuple; max_loop_size=0, bp_update_kwargs=_default_bp_update_kwargs, kwargs...)
     # unpack
     op = obs[1]
     qinds = obs[2]
@@ -17,19 +23,55 @@ function expect(tn::ITensorNetwork, obs::Tuple; max_loop_size=0, imag_tol=1e-14)
         coeff = obs[3]
     end
 
-    # TODO: can we pass BP caches somewhere?
-    # this extra exception may not be needed, but it should be a bit faster
-    if max_loop_size == 0
-        val = (ITensorNetworks.expect(tn, op, qinds)*coeff)[] # [] to get the scalar value
-    else
-        val = expect_loopcorrect(tn, [string(o) for o in op], qinds, max_loop_size) * coeff
-    end
+    op_vec = [string(o) for o in op]
+    qinds_vec = vec(collect(qinds))
 
+    # TODO: expect for vectors of observables. Re-use the same BP caches.
+    val = expect_loopcorrect(ψIψ, op_vec, qinds_vec, max_loop_size; bp_update_kwargs, kwargs...) * coeff
 
     return val
 end
 
-# boundary MPS
+
+function expect_loopcorrect(
+    ψIψ::BeliefPropagationCache, op_strings::Vector, verts::Vector, max_circuit_size::Int64; max_genus::Int64=2, bp_update_kwargs=_default_bp_update_kwargs
+)
+
+    # TODO: default max genus to ceil(max_circuit_size/min_loop_size)
+    # Warn if max_genus is 3 or larger lol
+    if max_genus > 2
+        @warn "Expectation value calculation with max_genus > 2 is not supported."
+        # flush to instantly see the warning
+        flush(stdout)
+    end
+
+
+    ψIψ_tn = tensornetwork(ψIψ)
+    ψIψ_vs = [ψIψ_tn[operator_vertex(ψIψ_tn, v)] for v in verts]
+    sinds = [commonind(ψIψ_tn[ket_vertex(ψIψ_tn, v)], ψIψ_vs[i]) for (i, v) in enumerate(verts)]
+    operators = [ITensors.op(op_strings[i], sinds[i]) for i in 1:length(op_strings)]
+
+    ψOψ = update_factors(ψIψ, Dictionary([(v, "operator") for v in verts], operators))
+
+    sI = scalar(ψIψ)
+    # this normalization can be done only once.
+    ψIψ = normalize(ψIψ)
+    # TODO: enumerating the circuits can be done once per batch of observables and then reused
+    denom = sI * corrected_free_energy(ψIψ, max_circuit_size; max_genus)
+
+    ψOψ = update(ψOψ; bp_update_kwargs...)
+    sO = scalar(ψOψ)
+    ψOψ = normalize(ψOψ)
+    numer = sO * corrected_free_energy(ψOψ, max_circuit_size; max_genus)
+
+    # TODO: something like this
+    # identities = [ITensors.op("I", sinds[i]) for i in 1:length(op_strings)]
+    # ψIψ = update_factors(ψOψ, Dictionary([(v, "operator") for v in verts], identities))
+    return numer / denom
+end
+
+
+## boundary MPS
 function expect(ψIψ::BoundaryMPSBeliefPropagationCache, obs::Tuple; kwargs...)
 
     op_string = obs[1]
@@ -68,39 +110,4 @@ function expect(ψIψ::BoundaryMPSBeliefPropagationCache, obs::Tuple; kwargs...)
 
     return val * coeff
 end
-
-
-function expect_loopcorrect(
-    ψIψ::BeliefPropagationCache, op_strings::Vector, verts::Vector, max_circuit_size::Int64; max_genus::Int64=2, bp_update_kwargs=default_cache_update_kwargs(ψIψ)
-)
-
-    ψIψ_tn = tensornetwork(ψIψ)
-    ψIψ_vs = [ψIψ_tn[operator_vertex(ψIψ_tn, v)] for v in verts]
-    sinds = [commonind(ψIψ_tn[ket_vertex(ψIψ_tn, v)], ψIψ_vs[i]) for (i, v) in enumerate(verts)]
-    operators = [ITensors.op(op_strings[i], sinds[i]) for i in 1:length(op_strings)]
-
-    ψOψ = update_factors(ψIψ, Dictionary([(v, "operator") for v in verts], operators))
-
-    s = scalar(ψIψ)
-    ψIψ = normalize(ψIψ)
-    denom = s * corrected_free_energy(ψIψ, max_circuit_size; max_genus)
-
-    ψOψ = update(ψOψ; bp_update_kwargs...)
-    s = scalar(ψOψ)
-    ψOψ = normalize(ψOψ)
-    numer = s * corrected_free_energy(ψOψ, max_circuit_size; max_genus)
-
-    return numer / denom
-end
-
-function expect_loopcorrect(ψIψ::BeliefPropagationCache, op_string, vert, max_circuit_size::Int64; kwargs...)
-    return expect_loopcorrect(ψIψ, [op_string], [vert], max_circuit_size; kwargs...)
-end
-
-function expect_loopcorrect(ψ::ITensorNetwork, args...; bp_update_kwargs=(; maxiter=25, tol=1e-8), kwargs...)
-    ψIψ = BeliefPropagationCache(QuadraticFormNetwork(ψ))
-    ψIψ = update(ψIψ; bp_update_kwargs...)
-    return expect_loopcorrect(ψIψ, args...; bp_update_kwargs, kwargs...)
-end
-
 

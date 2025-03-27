@@ -97,6 +97,7 @@ function circuit_weights(bpc, circuits, args...)
 end
 
 function corrected_free_energy(bpc::BeliefPropagationCache, args...; kwargs...)
+    # TODO: enumerating the circuits can be done once per batch of observables and then reused
     circuits = enumerate_circuits(bpc, args...)
     isempty(circuits) && return 1
     return 1 + sum(circuit_weights(bpc, circuits))

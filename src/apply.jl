@@ -65,6 +65,7 @@ function ITensors.apply(
             println("Gate $ii:    Simulation time: $(t.time) secs,    Max χ: $(ITensorNetworks.maxlinkdim(ψ))")
         end
 
+        # TODO: the update should actual happen before the gate is applied
         # check if the gate is a 2-qubit gate and whether it affects the counter
         # we currently only increment the counter if the gate affects vertices that have already been affected
         counter, affected_vertices = _check_and_update_counter(counter, affected_vertices, gate)
@@ -90,12 +91,6 @@ function ITensors.apply(
     return ψ, ψψ
 end
 
-
-# # gate apply function without bp cache. build cache first. Not optimal!
-# TODO: decide on this. It currently overrides the ITensorNetworks.apply function. 
-# function ITensors.apply(gate, ψ::ITensorNetwork; bp_update_kwargs=_default_bp_update_kwargs, apply_kwargs=_default_apply_kwargs)
-#     return apply(gate, ψ, build_bp_cache(ψ; bp_update_kwargs...); reset_all_messages=false, apply_kwargs)
-# end
 
 # gate apply function for tuple gates. The gate gets converted to an ITensor first.
 function ITensors.apply(gate::Tuple, ψ::ITensorNetwork, ψψ::BeliefPropagationCache; apply_kwargs=_default_apply_kwargs)

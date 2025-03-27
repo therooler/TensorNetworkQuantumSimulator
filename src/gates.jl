@@ -24,7 +24,7 @@ function paulirotation(generator, θ, indices)
 
     if heisenberg
         # transform into PTMs
-        U = PP.calculateptm(U, heisenberg=false)  # not yet sure why "false" is correct
+        U = PP.calculateptm(U, heisenberg=true)  # not yet sure why "false" is correct
     end
 
     # check for physical dimension matching
@@ -32,10 +32,10 @@ function paulirotation(generator, θ, indices)
 
 
     # define legs of the tensor
-    legs = (indices, (ind' for ind in indices))
+    legs = (indices..., [ind' for ind in indices]...)
 
     # create the ITensor
-    return itensor(U, Iterators.flatten(legs)...)
+    return itensor(transpose(U), legs)
 
 end
 
