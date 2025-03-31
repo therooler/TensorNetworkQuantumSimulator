@@ -11,4 +11,21 @@ include("gates.jl")
 include("apply.jl")
 include("expect.jl")
 
+
+export
+    updatecache,
+    build_bp_cache,
+    vertices,
+    edges,
+    apply,
+    get_global_bp_update_kwargs,
+    set_global_bp_update_kwargs!,
+    reset_global_bp_update_kwargs!,
+    expect,
+    truncate,
+    maxlinkdim,
+    siteinds,
+    edge_color,
+    zerostate
+
 end
