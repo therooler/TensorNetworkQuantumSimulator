@@ -1,3 +1,26 @@
+# conversion of a tuple circuit to an ITensor circuit
+function toitensor(circuit, sinds::IndsNetwork)
+    return [toitensor(gate, sinds) for gate in circuit]
+end
+
+# conversion of the tuple gate to an ITensor
+function toitensor(gate::Tuple, sinds::IndsNetwork)
+    gate_symbol = gate[1]
+    gate_inds = gate[2]
+    θ = gate[3]
+
+    # if it is a NamedEdge, we need to convert it to a tuple
+    gate_inds = _ensuretuple(gate_inds)
+
+    return paulirotation(gate_symbol, gate_inds, θ, sinds)
+end
+
+# conversion retruns the gate itself if it is already
+function toitensor(gate::ITensor, sinds::IndsNetwork)
+    return gate
+end
+
+
 function paulirotation(generator, qinds, θ, tninds::IndsNetwork)
     # ("XX", 0.3, (1, 2))) could be the gate part
 
@@ -47,4 +70,14 @@ function paulirotationmatrix(generator, θ)
     symbols = stringtosymbols(generator)
     pauli_rot = PP.PauliRotation(symbols, 1:length(symbols))
     return PP.tomatrix(pauli_rot, θ)
+end
+
+
+# conversion of the gate indices to a tuple
+function _ensuretuple(gate_inds::Union{Tuple,AbstractArray})
+    return gate_inds
+end
+
+function _ensuretuple(gate_inds::NamedEdge)
+    return (gate_inds.src, gate_inds.dst)
 end

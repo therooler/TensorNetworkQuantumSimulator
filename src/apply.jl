@@ -3,7 +3,7 @@
 # What about normalization?
 # How do we handle the BP cache? Build a new object that has both?
 
-const _default_apply_kwargs = (maxdim=Inf, cutoff=1e-10, normalize=false)
+const _default_apply_kwargs = (maxdim=Inf, cutoff=1e-10, normalize=true)
 
 # import ITensorNetworks.apply for less clutter down below
 # import ITensors.apply
@@ -61,7 +61,7 @@ function ITensors.apply(
         t = @timed ψ, ψψ = apply(gate, ψ, ψψ; apply_kwargs)
 
         if verbose
-            println("Gate $ii:    Simulation time: $(t.time) secs,    Max χ: $(ITensorNetworks.maxlinkdim(ψ))")
+            println("Gate $ii:    Simulation time: $(t.time) secs,    Max χ: $(maxlinkdim(ψ))")
         end
 
         # TODO: the update should actual happen before the gate is applied
@@ -139,25 +139,6 @@ function ITensors.apply(
     return ψ, ψψ
 end
 
-
-# conversion of a tuple circuit to an ITensor circuit
-function toitensor(circuit, sinds::IndsNetwork)
-    return [toitensor(gate, sinds) for gate in circuit]
-end
-
-# conversion of the tuple gate to an ITensor
-function toitensor(gate::Tuple, sinds::IndsNetwork)
-    gate_symbol = gate[1]
-    gate_inds = gate[2]
-    θ = gate[3]
-
-    return paulirotation(gate_symbol, gate_inds, θ, sinds)
-end
-
-# conversion retruns the gate itself if it is already
-function toitensor(gate::ITensor, sinds::IndsNetwork)
-    return gate
-end
 
 function _check_and_update_counter(counter::Integer, affected_vertices::Set, gate::ITensor)
     indices = inds(gate)
