@@ -2,7 +2,7 @@ using LinearAlgebra
 
 using Dictionaries: Dictionary, set!
 
-using Graphs: simplecycles_limited_length, has_edge, SimpleGraph, center
+using Graphs: simplecycles_limited_length, has_edge, SimpleGraph, center, steiner_tree
 
 using NamedGraphs
 using NamedGraphs: AbstractNamedGraph, AbstractGraph, position_graph, rename_vertices, edges, vertextype, add_vertex!, neighbors
@@ -17,19 +17,28 @@ using NamedGraphs.GraphsExtensions:
     add_edge!,
     edgetype,
     leaf_vertices,
-    post_order_dfs_edges
+    post_order_dfs_edges,
+    decorate_graph_edges,
+    add_vertex!,
+    add_vertex,
+    rem_edge,
+    add_edges
 
-using NamedGraphs.PartitionedGraphs: PartitionedGraphs, partitioned_vertices, partitionedges, unpartitioned_graph
+using NamedGraphs.PartitionedGraphs: PartitionedGraphs, partitioned_vertices, partitionedges, unpartitioned_graph, which_partition
+
+using NamedGraphs.NamedGraphGenerators:
+    named_grid, named_hexagonal_lattice_graph
 
 using SimpleGraphConverter: UG
 using SimpleGraphAlgorithms
 using SimpleGraphAlgorithms: edge_color
 
 using ITensors
-using ITensors: Index, ITensor, inner, itensor, apply, map_diag!
+using ITensors: Index, ITensor, inner, itensor, apply, map_diag!, @Algorithm_str, scalar
 
 using ITensorNetworks
 using ITensorNetworks:
+    AbstractBeliefPropagationCache,
     AbstractITensorNetwork,
     AbstractIndsNetwork,
     Indices,
@@ -44,6 +53,8 @@ using ITensorNetworks:
     VidalITensorNetwork,
     norm_sqr_network,
     update,
+    updated_message,
+    set_message,
     siteinds,
     vertices,
     dim,
@@ -73,7 +84,7 @@ using ITensorNetworks:
     contraction_sequence,
     group,
     partitionedges,
-    # insert_linkinds,
+    linkinds,
     generic_state,
     setindex_preserve_graph!,
     edge_tag,

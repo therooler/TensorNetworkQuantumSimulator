@@ -1,21 +1,68 @@
+## Utilities to globally set bp_update_kwargs
+const _default_bp_update_maxiter = 20
+const _default_bp_update_tol = 1e-8
+_default_message_update_function(ms) = make_eigs_real.(default_message_update(ms))
+
+
+# we make this a Dict that it can be pushed to with kwargs that we haven't thought of
+const _global_bp_update_kwargs::Dict{Symbol,Any} = Dict(
+    :maxiter => _default_bp_update_maxiter,
+    :tol => _default_bp_update_tol,
+    :message_update_kwargs => (; message_update_function=_default_message_update_function)
+)
+
+function set_global_bp_update_kwargs!(; kwargs...)
+    for (arg, val) in kwargs
+        _global_bp_update_kwargs[arg] = val
+    end
+    return get_global_bp_update_kwargs()
+end
+
+function get_global_bp_update_kwargs()
+    # return as a named tuple
+    return (; _global_bp_update_kwargs...)
+end
+
+function reset_global_bp_update_kwargs!()
+    empty!(_global_bp_update_kwargs)
+    _global_bp_update_kwargs[:maxiter] = _default_bp_update_maxiter
+    _global_bp_update_kwargs[:tol] = _default_bp_update_tol
+    _global_bp_update_kwargs[:message_update_kwargs] = (; message_update_function=_default_message_update_function)
+    return get_global_bp_update_kwargs()
+end
+
+## Frontend functions
+
 function updatecache(bp_cache::BeliefPropagationCache; bp_update_kwargs...)
     # merge provided kwargs with the defaults
     bp_update_kwargs = merge(get_global_bp_update_kwargs(), bp_update_kwargs)
+    # if bp_update_kwargs[:maxiter] > 0
+    #     @show "updating"
+    # end
+
     return update(bp_cache; bp_update_kwargs...)
 end
 
 
-function build_bp_cache(ψ::AbstractITensorNetwork; kwargs...)
+function build_bp_cache(ψ::AbstractITensorNetwork; update_cache=true, bp_update_kwargs...)
     bpc = BeliefPropagationCache(QuadraticFormNetwork(ψ))
     # TODO: QuadraticFormNetwork() builds ψIψ network, but for Pauli picture `norm_sqr_network()` is enough
     # https://github.com/ITensor/ITensorNetworks.jl/blob/main/test/test_belief_propagation.jl line 49 to construct the cache without the identities.
-    bpc = updatecache(bpc; kwargs...)
+    if update_cache
+        bpc = updatecache(bpc; bp_update_kwargs...)
+    end
     return bpc
 end
 
-function ITensors.scalar(bp_cache::BeliefPropagationCache)
+## Backend functions
+
+function ITensors.scalar(bp_cache::AbstractBeliefPropagationCache)
     numers, denoms = scalar_factors_quotient(bp_cache)
-    isempty(denoms) && return prod(numers)
+
+    if isempty(denoms)
+        return prod(numers)
+    end
+
     return prod(numers) / prod(denoms)
 end
 
