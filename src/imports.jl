@@ -33,6 +33,8 @@ using SimpleGraphConverter: UG
 using SimpleGraphAlgorithms
 using SimpleGraphAlgorithms: edge_color
 
+using TensorOperations
+
 using ITensors
 using ITensors: Index, ITensor, inner, itensor, apply, map_diag!, @Algorithm_str, scalar
 
