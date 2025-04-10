@@ -6,8 +6,8 @@ end
 
 ## Utilities to globally set boundary MPS_update_kwargs 
 const _default_boundarymps_update_alg = "orthogonal"
-const _default_boundarymps_update_niters = 20
-const _default_boundarymps_update_tolerance = 1e-8
+const _default_boundarymps_update_niters = 25
+const _default_boundarymps_update_tolerance = 1e-10
 
 
 # we make this a Dict that it can be pushed to with kwargs that we haven't thought of
@@ -697,11 +697,16 @@ function ITensorNetworks.environment(bmpsc::BoundaryMPSCache, verts::Vector; kwa
     return environment(bp_cache(bmpsc), verts; kwargs...)
 end
 
-#Region scalars, allowing computation of the free energy within boundary MPS
 function ITensorNetworks.region_scalar(bmpsc::BoundaryMPSCache, partition)
     partition_vs = planargraph_vertices(bmpsc, partition)
     bmpsc = partition_update(bmpsc, [first(partition_vs)], [last(partition_vs)])
     return region_scalar(bp_cache(bmpsc), PartitionVertex(last(partition_vs)))
+end
+
+function ITensorNetworks.region_scalar(bmpsc::BoundaryMPSCache, verts::Vector)
+    partitions = planargraph_partitions(bmpsc, parent.(partitionvertices(bmpsc, verts)))
+    length(partitions) == 1 && return region_scalar(bmpsc, only(partitions))
+    error("Contractions involving more than 1 partition not currently supported")
 end
 
 function ITensorNetworks.region_scalar(bmpsc::BoundaryMPSCache, partitionpair::Pair)
