@@ -41,8 +41,8 @@ function updatecache(bp_cache::AbstractBeliefPropagationCache; bp_update_kwargs.
 end
 
 
-function build_bp_cache(ψ::AbstractITensorNetwork; update_cache=true, bp_update_kwargs...)
-    bpc = BeliefPropagationCache(QuadraticFormNetwork(ψ))
+function build_bp_cache(ψ::AbstractITensorNetwork, args...; update_cache=true, bp_update_kwargs...)
+    bpc = BeliefPropagationCache(QuadraticFormNetwork(ψ), args...)
     # TODO: QuadraticFormNetwork() builds ψIψ network, but for Pauli picture `norm_sqr_network()` is enough
     # https://github.com/ITensor/ITensorNetworks.jl/blob/main/test/test_belief_propagation.jl line 49 to construct the cache without the identities.
     if update_cache

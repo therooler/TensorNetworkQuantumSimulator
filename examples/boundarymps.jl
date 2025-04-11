@@ -1,4 +1,17 @@
-include("../src/ITensorNetworksExamples.jl")
+using TensorNetworkQuantumSimulator
+const TN = TensorNetworkQuantumSimulator
+
+using ITensorNetworks
+const ITN = ITensorNetworks
+using ITensors
+
+using NamedGraphs
+using Graphs
+const NG = NamedGraphs
+const G = Graphs
+using NamedGraphs.NamedGraphGenerators: named_grid, named_hexagonal_lattice_graph
+
+using EinExprs: Greedy
 
 using Random
 Random.seed!(1634)
@@ -13,14 +26,13 @@ function main()
     (named_grid((nx, 1)), "line"),
     (named_hexagonal_lattice_graph(nx - 2, ny -2), "hexagonal"),
     (named_grid((nx, ny)), "square"),
-    (lieb_lattice_grid(nx, ny), "lieb"),
   ]
   for (g, g_str) in gs
     println("Testing for $g_str lattice with $(nv(g)) vertices")
     s = siteinds("S=1/2", g)
-    ψ = random_tensornetwork(ComplexF64, s; link_space=χ)
-    s = siteinds(ψ)
-    v_centre = first(center(g))
+    ψ = ITN.random_tensornetwork(ComplexF64, s; link_space=χ)
+    s = ITN.siteinds(ψ)
+    v_centre = first(G.center(g))
 
     println("Computing single site expectation value via various means")
     boundary_mps_ranks = [1, 2, 4, 8, 16, 32]

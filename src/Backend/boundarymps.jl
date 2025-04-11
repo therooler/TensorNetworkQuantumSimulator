@@ -48,6 +48,7 @@ end
 function build_boundarymps_cache(
     ψ::AbstractITensorNetwork,
     message_rank::Int64;
+    cache_construction_kwargs = (;),
     boundary_mps_kwargs...
 )
     # # update the cache later unless we are in symmetric gauge
@@ -60,21 +61,22 @@ function build_boundarymps_cache(
     #     ψ = ITensorNetwork(ψ)
     # end
 
-    # build the BP cache and update if not in symmetric gauge
+    # build the BP cache
     ψIψ = build_bp_cache(ψ; update_cache=false)
 
     # convert BP cache to boundary MPS cache, no further update needed
-    return build_boundarymps_cache(ψIψ, message_rank; boundary_mps_kwargs...)
+    return build_boundarymps_cache(ψIψ, message_rank; cache_construction_kwargs, boundary_mps_kwargs...)
 end
 
 function build_boundarymps_cache(
     ψIψ::AbstractBeliefPropagationCache,
     message_rank::Int64;
     update_cache=true,
+    cache_construction_kwargs = (;),
     boundary_mps_kwargs...
 )
 
-    ψIψ = BoundaryMPSCache(ψIψ; message_rank)
+    ψIψ = BoundaryMPSCache(ψIψ; message_rank, cache_construction_kwargs...)
 
     if update_cache
         # update the cache
@@ -126,14 +128,9 @@ function ITensorNetworks.default_edge_sequence(alg::Algorithm, bmpsc::BoundaryMP
     return pair.(default_edge_sequence(ppg(bmpsc)))
 end
 
-# function default_message_update_kwargs(alg::Algorithm"orthogonal", bmpsc::BoundaryMPSCache)
-#     return (; niters=50, tolerance=1e-10)
-# end
-# function default_message_update_kwargs(
-#     alg::Algorithm"biorthogonal", bmpsc::BoundaryMPSCache
-# )
-#     return (; niters=3, tolerance=nothing)
-# end
+function default_message_update_kwargs(alg::Algorithm"orthogonal", bmpsc::BoundaryMPSCache)
+    return (; niters=50, tolerance=1e-10)
+end
 default_boundarymps_message_rank(tn::AbstractITensorNetwork) = maxlinkdim(tn)^2
 ITensorNetworks.partitions(bmpsc::BoundaryMPSCache) = parent.(collect(partitionvertices(ppg(bmpsc))))
 ITensorNetworks.partitionpairs(bmpsc::BoundaryMPSCache) = pair.(partitionedges(ppg(bmpsc)))

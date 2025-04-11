@@ -6,7 +6,7 @@ function SimpleGraphAlgorithms.edge_color(g::AbstractGraph, k::Int64)
 end
 
 """Create heavy-hex lattice geometry"""
-function heavy_hexagonal_lattice_grid(nx::Int64, ny::Int64)
+function heavy_hexagonal_lattice(nx::Int64, ny::Int64)
     g = named_hexagonal_lattice_graph(nx, ny)
     # create some space for inserting the new vertices
     g = rename_vertices(v -> (2 * first(v) - 1, 2 * last(v) - 1), g)
@@ -16,6 +16,17 @@ function heavy_hexagonal_lattice_grid(nx::Int64, ny::Int64)
         g = add_vertex(g, v_new)
         g = rem_edge(g, e)
         g = add_edges(g, [NamedEdge(vsrc => v_new), NamedEdge(v_new => vdst)])
+    end
+    return g
+end
+
+function lieb_lattice(nx::Int64, ny::Int64; periodic=false)
+    @assert (!periodic && isodd(nx) && isodd(ny)) || (periodic && iseven(nx) && iseven(ny))
+    g = named_grid((nx, ny); periodic)
+    for v in vertices(g)
+      if iseven(first(v)) && iseven(last(v))
+        g = rem_vertex(g, v)
+      end
     end
     return g
 end

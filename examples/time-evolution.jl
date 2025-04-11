@@ -8,10 +8,10 @@ using NamedGraphs.NamedGraphGenerators: named_grid
 function main()
     nx = 5
     ny = 5
-    nq = nx * ny
 
     # the graph is your main friend in working with the TNs
     g = named_grid((nx, ny))
+    nq = length(vertices(g))
 
     dt = 0.05
 
@@ -30,7 +30,7 @@ function main()
     obs = ("Z", [(3, 3)])  # right in the middle
 
     # the number of circuit layers
-    nl = 50
+    nl = 20
 
     # the initial state
     ψ = zerostate(g)
@@ -38,7 +38,7 @@ function main()
     # an array to keep track of expectations
     expectations = Float64[real(expect(ψ, obs))]
 
-    # evolve! The first evaluation will take significantly longer because of compulation.
+    # evolve! The first evaluation will take significantly longer because of compilation.
     for l in 1:nl
         #printing
         println("Layer $l")
@@ -51,6 +51,47 @@ function main()
 
         # printing
         println("    Took time: $(t.time) [s]. Max bond dimension: $(maxlinkdim(ψ))")
+    end
+
+
+    ## A few more advanced options
+    # we will still do exactly the same evolution but also do boundary mps for expectation values
+
+    # max bond dimension for the TN
+    # we will use enough and just see how
+    apply_kwargs = (maxdim=20, cutoff=1e-10, normalize=false)
+
+    # these kwargs are used every time the BP is updated, but you can pass other kwargs to individual functions 
+    set_global_bp_update_kwargs!(maxiter=25, tol=1e-6)
+    set_global_boundarymps_update_kwargs!(message_update_kwargs = (; niters = 20, tolerance = 1e-10))
+
+    # the initial state
+    ψ = zerostate(g)
+
+    # create the BP cache manually
+    ψψ = build_bp_cache(ψ)
+
+    # an array to keep track of expectations
+    expectations_advanced = Float64[real(expect(ψ, obs))]
+    boundarymps_rank = 4
+
+    # evolve! The first evaluation will take significantly longer because of compulation.
+    for l in 1:nl
+        println("Layer $l")
+
+        # pass BP cache manually
+        # only update cache every `update_every` overlapping 2-qubit gates
+        t1 = @timed ψ, ψψ = apply(layer, ψ, ψψ; apply_kwargs, update_every=1, verbose=false);
+        
+        ## could also update outside 
+        # t2 = @timed ψψ = updatecache(ψψ)
+
+        # push expectation to list
+        # pass the cache instead of the state so that things don't have to update over and over
+        push!(expectations_advanced, real(expect(ψ, obs; alg = "boundarymps", cache_construction_kwargs =(; message_rank = boundarymps_rank))))  # with some boundary mps correction
+
+        
+        println("    Took time: $(t1.time) [s]. Max bond dimension: $(maxlinkdim(ψ))")
     end
 end
 
