@@ -34,21 +34,6 @@ function trace(Q::ITensorNetwork)
 end
 
 
-function topologytograph(topology)
-    # TODO: adapt this to named graphs with non-integer labels
-    # find number of vertices
-    nq = maximum(maximum.(topology))
-    adjm = zeros(Int, nq, nq)
-    for (ii, jj) in topology
-        adjm[ii, jj] = adjm[jj, ii] = 1
-    end
-    return NamedGraph(SimpleGraph(adjm))
-end
-
-
-function graphtotopology(g)
-    return [[edge.src, edge.dst] for edge in edges(g)]
-end
 
 stringtosymbols(str) = [Symbol(s) for s in str]
 

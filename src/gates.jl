@@ -60,15 +60,12 @@ function paulirotation(generator, θ, indices)
         U = PP.calculateptm(U, heisenberg=true)
     end
 
-    # check for physical dimension matching
-    # TODO
-
 
     # define legs of the tensor
-    legs = (indices..., [ind' for ind in indices]...)
+    legs = (indices'..., indices...)
 
     # create the ITensor
-    return itensor(transpose(U), legs)
+    return itensor(U, legs)
 
 end
 

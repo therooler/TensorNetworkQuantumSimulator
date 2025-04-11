@@ -20,3 +20,36 @@ function heavy_hexagonal_lattice_grid(nx::Int64, ny::Int64)
     end
     return g
 end
+
+
+function topologytograph(topology)
+    # TODO: adapt this to named graphs with non-integer labels
+    # find number of vertices
+    nq = maximum(maximum.(topology))
+    adjm = zeros(Int, nq, nq)
+    for (ii, jj) in topology
+        adjm[ii, jj] = adjm[jj, ii] = 1
+    end
+    return NamedGraph(SimpleGraph(adjm))
+end
+
+
+function graphtotopology(g)
+    return [[edge.src, edge.dst] for edge in edges(g)]
+end
+
+function NamedGraphs.GraphsExtensions.rem_vertex(bpc::AbstractBeliefPropagationCache, v)
+    return rem_vertices(bpc, [v])
+end
+
+function NamedGraphs.GraphsExtensions.rem_vertices(bpc::BeliefPropagationCache, vs::Vector)
+    pg = partitioned_tensornetwork(bpc)
+    pg = rem_vertices(pg, vs)
+    return BeliefPropagationCache(pg, messages(bpc))
+end
+
+function NamedGraphs.GraphsExtensions.rem_vertices(bmpsc::BoundaryMPSCache, vs::Vector)
+    bpc = bp_cache(bmpsc)
+    bpc = rem_vertices(bpc, vs)
+    return BoundaryMPSCache(bpc, ppg(bmpsc), maximum_virtual_dimension(bmpsc))
+end

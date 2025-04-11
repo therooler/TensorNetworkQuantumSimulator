@@ -61,6 +61,15 @@ function build_bp_cache(ψ::AbstractITensorNetwork, ϕ::AbstractITensorNetwork; 
     return ψϕ
 end
 
+function symmetric_gauge(ψ::AbstractITensorNetwork; cache_update_kwargs=(;))
+    ψ_vidal = VidalITensorNetwork(ψ; cache_update_kwargs)
+    cache_ref = Ref{BeliefPropagationCache}()
+    ψ_symm = ITensorNetwork(ψ_vidal; (cache!)=cache_ref)
+    bp_cache = cache_ref[]
+    return ψ_symm, bp_cache
+end
+
+
 ## Backend functions
 
 function ITensors.scalar(bp_cache::AbstractBeliefPropagationCache)
@@ -158,7 +167,6 @@ end
 function normalize_messages(bp_cache::BeliefPropagationCache)
     return normalize_messages(bp_cache, partitionedges(partitioned_tensornetwork(bp_cache)))
 end
-
 
 function make_eigs_real(A::ITensor)
     return map_eigvals(x -> real(x), A, first(inds(A)), last(inds(A)); ishermitian=true)
