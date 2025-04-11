@@ -5,9 +5,8 @@ function SimpleGraphAlgorithms.edge_color(g::AbstractGraph, k::Int64)
     return [[(vs[first(first(e))], vs[last(first(e))]) for e in ec_dict if last(e) == i] for i in 1:k]
 end
 
-
 """Create heavy-hex lattice geometry"""
-function heavy_hexagonal_lattice_grid(nx::Int64, ny::Int64)
+function heavy_hexagonal_lattice(nx::Int64, ny::Int64)
     g = named_hexagonal_lattice_graph(nx, ny)
     # create some space for inserting the new vertices
     g = rename_vertices(v -> (2 * first(v) - 1, 2 * last(v) - 1), g)
@@ -21,6 +20,17 @@ function heavy_hexagonal_lattice_grid(nx::Int64, ny::Int64)
     return g
 end
 
+function lieb_lattice(nx::Int64, ny::Int64; periodic=false)
+    @assert (!periodic && isodd(nx) && isodd(ny)) || (periodic && iseven(nx) && iseven(ny))
+    g = named_grid((nx, ny); periodic)
+    for v in vertices(g)
+      if iseven(first(v)) && iseven(last(v))
+        g = rem_vertex(g, v)
+      end
+    end
+    return g
+
+end
 
 function topologytograph(topology)
     # TODO: adapt this to named graphs with non-integer labels
@@ -52,4 +62,3 @@ function NamedGraphs.GraphsExtensions.rem_vertices(bmpsc::BoundaryMPSCache, vs::
     bpc = bp_cache(bmpsc)
     bpc = rem_vertices(bpc, vs)
     return BoundaryMPSCache(bpc, ppg(bmpsc), maximum_virtual_dimension(bmpsc))
-end
