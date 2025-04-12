@@ -4,6 +4,7 @@ const TN = TensorNetworkQuantumSimulator
 using ITensorNetworks
 
 using NamedGraphs.NamedGraphGenerators: named_grid
+using Statistics
 
 function main()
     nx = 5
@@ -13,7 +14,7 @@ function main()
     g = named_grid((nx, ny))
     nq = length(vertices(g))
 
-    dt = 0.05
+    dt = 0.25
 
     hx = 1.0
     hz = 0.8
@@ -38,28 +39,29 @@ function main()
     # an array to keep track of expectations
     expectations = Float64[real(expect(ψ, obs))]
 
+    # max bond dimension for the TN
+    # we will use enough and just see how
+    apply_kwargs = (maxdim=5, cutoff=1e-10, normalize=false)
+
     # evolve! The first evaluation will take significantly longer because of compilation.
     for l in 1:nl
         #printing
         println("Layer $l")
 
         # apply layer
-        t = @timed ψ = apply(layer, ψ);
+        t = @timed ψ, errors = apply(layer, ψ; apply_kwargs);
 
         # push expectation to list
         push!(expectations, real(expect(ψ, obs)))
 
         # printing
         println("    Took time: $(t.time) [s]. Max bond dimension: $(maxlinkdim(ψ))")
+        println("    Maximum Gate error for layer was $(maximum(errors))")
     end
 
 
     ## A few more advanced options
     # we will still do exactly the same evolution but also do boundary mps for expectation values
-
-    # max bond dimension for the TN
-    # we will use enough and just see how
-    apply_kwargs = (maxdim=20, cutoff=1e-10, normalize=false)
 
     # these kwargs are used every time the BP is updated, but you can pass other kwargs to individual functions 
     set_global_bp_update_kwargs!(maxiter=25, tol=1e-6)
@@ -81,7 +83,7 @@ function main()
 
         # pass BP cache manually
         # only update cache every `update_every` overlapping 2-qubit gates
-        t1 = @timed ψ, ψψ = apply(layer, ψ, ψψ; apply_kwargs, update_every=1, verbose=false);
+        t1 = @timed ψ, ψψ, errors = apply(layer, ψ, ψψ; apply_kwargs, update_every=1, verbose=false);
         
         ## could also update outside 
         # t2 = @timed ψψ = updatecache(ψψ)
@@ -92,6 +94,7 @@ function main()
 
         
         println("    Took time: $(t1.time) [s]. Max bond dimension: $(maxlinkdim(ψ))")
+        println("    Maximum Gate error for layer was $(maximum(errors))")
     end
 end
 
