@@ -1,4 +1,5 @@
 using LinearAlgebra
+using StatsBase
 
 using Dictionaries: Dictionary, set!
 
@@ -22,7 +23,9 @@ using NamedGraphs.GraphsExtensions:
     add_vertex!,
     add_vertex,
     rem_edge,
-    add_edges
+    rem_vertex,
+    add_edges,
+    rem_vertices
 
 using NamedGraphs.PartitionedGraphs: PartitionedGraphs, partitioned_vertices, partitionedges, unpartitioned_graph, which_partition
 
@@ -99,7 +102,8 @@ using ITensorNetworks:
     # update_message,
     tree_orthogonalize,
     gauge_walk,
-    maxlinkdim
+    maxlinkdim,
+    default_cache_construction_kwargs
 
 
 
