@@ -1,24 +1,6 @@
 getnqubits(g::NamedGraph) = length(g.vertices)
 getnqubits(tninds::IndsNetwork) = length(tninds.data_graph.vertex_data)
 
-
-getphysicaldim(indices::IndsNetwork) = dim(first(indices.data_graph.vertex_data.values))
-getphysicaldim(indices::AbstractVector{<:Index}) = first(indices)
-getphysicaldim(index::Index) = dim(index)
-
-
-## 
-function getmode(indices::IndsNetwork)
-    d = getphysicaldim(indices)
-    if d == 2
-        return "Schrödinger"
-    elseif d == 4
-        return "Heisenberg"
-    else
-        throwdimensionerror()
-    end
-end
-
 function trace(Q::ITensorNetwork)
     d = getphysicaldim(siteinds(Q))
     if d == 2
@@ -34,19 +16,18 @@ function trace(Q::ITensorNetwork)
 end
 
 
-
-stringtosymbols(str) = [Symbol(s) for s in str]
-
-function throwdimensionerror()
-    throw(ArgumentError("Only physical dimensions 2 and 4 are supported."))
-end
-
 function get_global_cache_update_kwargs(alg::Algorithm)
     alg == Algorithm("bp") && return get_global_bp_update_kwargs()
     alg == Algorithm("boundarymps") && return get_global_boundarymps_update_kwargs()
     error("No update parameters known for that algorithm")
 end
 
+## Truncate a tensor network down to a maximum bond dimension
+"""
+    truncate(ψ::ITensorNetwork, maxdim; cutoff=nothing, bp_update_kwargs=get_global_bp_update_kwargs())
+
+Truncate the ITensorNetwork `ψ` to a maximum bond dimension `maxdim` using the specified singular value cutoff.
+"""
 function ITensorNetworks.truncate(
     ψ::ITensorNetwork;
     cache_update_kwargs = get_global_bp_update_kwargs(),

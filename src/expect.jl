@@ -13,7 +13,10 @@ function ITensorNetworks.expect(
     out = []
     for obs in observables
         op_strings, vs, coeff = collectobservable(obs)
-        iszero(coeff) && return 0.0
+        if iszero(coeff)
+            push!(out, 0.0)
+            continue
+        end
         ψOψ = copy(ψIψ)
         for (op_string, v) in zip(op_strings, vs)
             ψOψ[(v, "operator")] = ITensors.op(op_string, s[v])
@@ -37,6 +40,7 @@ function ITensorNetworks.expect(
     return only(expect(alg, ψ, [obs]; kwargs...))
 end
 
+
 function ITensorNetworks.expect(
     alg::Algorithm,
     ψ::AbstractITensorNetwork,
@@ -49,6 +53,7 @@ function ITensorNetworks.expect(
         QuadraticFormNetwork(ψ),
     ),
     kwargs...,
+)
 )
     ψIψ = QuadraticFormNetwork(ψ)
     if isnothing(cache!)
@@ -71,18 +76,19 @@ function ITensorNetworks.expect(
     return only(expect(alg, ψ, [observable]; kwargs...))
 end
 
-"""
-    expect(ψ::AbstractITensorNetwork, obs::Tuple; kwargs...)
 
-Calculate the expectation value of an `ITensorNetwork` `ψ` with an observable `obs` using the desired algorithm.
+"""
+    expect(ψ::AbstractITensorNetwork, obs; kwargs...)
+
+Calculate the expectation value of an `ITensorNetwork` `ψ` with an observable or vector of observables `obs` using the desired algorithm.
 """
 function ITensorNetworks.expect(
     ψ::AbstractITensorNetwork,
-    args...;
-    alg = default_expect_alg(),
+    obs;
+    alg=default_expect_alg(),
     kwargs...,
 )
-    return expect(Algorithm(alg), ψ, args...; kwargs...)
+    return expect(Algorithm(alg), ψ, obs; kwargs...)
 end
 
 """
@@ -96,8 +102,9 @@ where `op` is a string or vector of strings, `qinds` is a vector of indices, and
 function ITensorNetworks.expect(
     ψIψ::AbstractBeliefPropagationCache,
     obs::Tuple;
-    update_cache = false,
+    update_cache=false,
     kwargs...,
+)
 )
 
     op_strings, vs, coeff = collectobservable(obs)
@@ -105,6 +112,8 @@ function ITensorNetworks.expect(
 
     ψOψ = insert_observable(ψIψ, obs)
 
+    numerator = region_scalar(ψOψ, [(v, "ket") for v in vs])
+    denominator = region_scalar(ψIψ, [(v, "ket") for v in vs])
     numerator = region_scalar(ψOψ, [(v, "ket") for v in vs])
     denominator = region_scalar(ψIψ, [(v, "ket") for v in vs])
 
@@ -123,11 +132,13 @@ end
 function insert_observable(ψIψ::AbstractBeliefPropagationCache, obs)
     op_strings, verts, _ = collectobservable(obs)
 
+
     ψIψ_tn = tensornetwork(ψIψ)
     ψIψ_vs = [ψIψ_tn[operator_vertex(ψIψ_tn, v)] for v in verts]
     sinds =
         [commonind(ψIψ_tn[ket_vertex(ψIψ_tn, v)], ψIψ_vs[i]) for (i, v) in enumerate(verts)]
     operators = [ITensors.op(op_strings[i], sinds[i]) for i in eachindex(op_strings)]
+
 
     ψOψ = update_factors(ψIψ, Dictionary([(v, "operator") for v in verts], operators))
     return ψOψ
@@ -139,11 +150,14 @@ function collectobservable(obs::Tuple)
     qinds = obs[2]
     coeff = length(obs) == 2 ? 1.0 : last(obs)
 
+
     @assert !(op == "" && isempty(qinds))
+
 
     op_vec = [string(o) for o in op]
     qinds_vec = _tovec(qinds)
     return op_vec, qinds_vec, coeff
+end
 end
 
 _tovec(qinds) = vec(collect(qinds))

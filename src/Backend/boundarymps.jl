@@ -759,7 +759,9 @@ end
 
 function ITensorNetworks.region_scalar(bmpsc::BoundaryMPSCache, verts::Vector)
     partitions = planargraph_partitions(bmpsc, parent.(partitionvertices(bmpsc, verts)))
-    length(partitions) == 1 && return region_scalar(bmpsc, only(partitions))
+    if length(partitions) == 1
+        return region_scalar(bmpsc, only(partitions))
+    end
     error("Contractions involving more than 1 partition not currently supported")
 end
 

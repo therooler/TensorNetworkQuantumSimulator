@@ -1,3 +1,36 @@
+function ITensors.scalar(alg::Algorithm"loopcorrections", bp_cache::AbstractBeliefPropagationCache; normalize_cache=true, max_configuration_size::Int64)
+    bp_cache = normalize_messages(bp_cache)
+    zbp = scalar(bp_cache; alg="bp")
+    bp_cache = normalize_cache ? normalize(bp_cache) : bp_cache
+    # count the cycles using NamedGraphs
+    egs = edgeinduced_subgraphs_no_leaves(partitioned_graph(bp_cache), max_configuration_size)
+    if isempty(egs)
+        return zbp
+    end
+    ws = weights(bp_cache, egs)
+    return zbp * (1 + sum(ws))
+end
+
+function ITensors.scalar(
+    alg::Algorithm"loopcorrections",
+    tn::AbstractITensorNetwork;
+    max_configuration_size::Int64,
+    (cache!)=nothing,
+    cache_construction_kwargs=default_cache_construction_kwargs(Algorithm("bp"), tn),
+    update_cache=isnothing(cache!),
+    cache_update_kwargs=default_cache_update_kwargs(Algorithm("bp")),
+)
+    if isnothing(cache!)
+        cache! = Ref(cache(Algorithm("bp"), tn; cache_construction_kwargs...))
+    end
+
+    if update_cache
+        cache![] = update(cache![]; cache_update_kwargs...)
+    end
+
+    return scalar(cache![]; alg, max_configuration_size)
+end
+
 function sim_edgeinduced_subgraph(bpc::BeliefPropagationCache, eg)
     bpc = copy(bpc)
     pvs = PartitionVertex.(collect(vertices(eg)))
@@ -48,7 +81,7 @@ function ITensorNetworks.boundary_partitionedges(
     pvs = unique(vcat(src.(pes), dst.(pes)))
     bpes = PartitionEdge[]
     for pv in pvs
-        incoming_es = boundary_partitionedges(bpc, pv; dir = :in)
+        incoming_es = boundary_partitionedges(bpc, pv; dir=:in)
         incoming_es = filter(e -> e ∉ pes && reverse(e) ∉ pes, incoming_es)
         append!(bpes, incoming_es)
     end
