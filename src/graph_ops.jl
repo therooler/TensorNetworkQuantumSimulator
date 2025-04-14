@@ -24,9 +24,9 @@ function lieb_lattice(nx::Int64, ny::Int64; periodic=false)
     @assert (!periodic && isodd(nx) && isodd(ny)) || (periodic && iseven(nx) && iseven(ny))
     g = named_grid((nx, ny); periodic)
     for v in vertices(g)
-      if iseven(first(v)) && iseven(last(v))
-        g = rem_vertex(g, v)
-      end
+        if iseven(first(v)) && iseven(last(v))
+            g = rem_vertex(g, v)
+        end
     end
     return g
 
@@ -62,3 +62,4 @@ function NamedGraphs.GraphsExtensions.rem_vertices(bmpsc::BoundaryMPSCache, vs::
     bpc = bp_cache(bmpsc)
     bpc = rem_vertices(bpc, vs)
     return BoundaryMPSCache(bpc, ppg(bmpsc), maximum_virtual_dimension(bmpsc))
+end

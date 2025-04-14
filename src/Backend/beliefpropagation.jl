@@ -42,13 +42,13 @@ end
 
 
 function build_bp_cache(ψ::AbstractITensorNetwork, args...; update_cache=true, bp_update_kwargs...)
-    bpc = BeliefPropagationCache(QuadraticFormNetwork(ψ), args...)
+    bp_cache = BeliefPropagationCache(QuadraticFormNetwork(ψ), args...)
     # TODO: QuadraticFormNetwork() builds ψIψ network, but for Pauli picture `norm_sqr_network()` is enough
     # https://github.com/ITensor/ITensorNetworks.jl/blob/main/test/test_belief_propagation.jl line 49 to construct the cache without the identities.
     if update_cache
-        bpc = updatecache(bpc; bp_update_kwargs...)
+        bp_cache = updatecache(bp_cache; bp_update_kwargs...)
     end
-    return bpc
+    return bp_cache
 end
 
 # BP cache for the inner product of two state networks
@@ -109,8 +109,11 @@ function LinearAlgebra.normalize(
         v_ket, v_bra = (v, "ket"), (v, "bra")
         pv = only(partitionvertices(ψAψ_bpc, [v_ket]))
         vn = region_scalar(ψAψ_bpc, pv)
-        state = copy(ψψ[v_ket]) / (sign(vn)*sqrt(sf * abs(vn)))
-        state_dag = copy(ψψ[v_bra]) / sqrt(sf * abs(vn))
+
+        # avoid numerical issues with negative vertex norm
+        vertex_normalization = sqrt(sf * abs(vn))
+        state = copy(ψψ[v_ket]) / (sign(vn) * vertex_normalization)
+        state_dag = copy(ψψ[v_bra]) / vertex_normalization
         vertices_states = Dictionary([v_ket, v_bra], [state, state_dag])
         ψAψ_bpc = update_factors(ψAψ_bpc, vertices_states)
     end
@@ -118,6 +121,7 @@ function LinearAlgebra.normalize(
     return ψAψ_bpc
 end
 
+# TODO: these two functions are very similar, we should re-use code
 function LinearAlgebra.normalize(
     ψ::ITensorNetwork,
     ψAψ_bpc::BeliefPropagationCache;
@@ -127,20 +131,23 @@ function LinearAlgebra.normalize(
 )
     ψ = copy(ψ)
     if update_cache
-    ψAψ_bpc = update(ψAψ_bpc; cache_update_kwargs...)
+        ψAψ_bpc = update(ψAψ_bpc; cache_update_kwargs...)
     end
     ψAψ_bpc = normalize_messages(ψAψ_bpc)
     ψψ = tensornetwork(ψAψ_bpc)
 
     for v in vertices(ψ)
-    v_ket, v_bra = (v, "ket"), (v, "bra")
-    pv = only(partitionvertices(ψAψ_bpc, [v_ket]))
-    vn = region_scalar(ψAψ_bpc, pv)
-    state = copy(ψψ[v_ket]) / (sign(vn)*sqrt(sf * abs(vn)))
-    state_dag = copy(ψψ[v_bra]) / sqrt(sf * abs(vn))
-    vertices_states = Dictionary([v_ket, v_bra], [state, state_dag])
-    ψAψ_bpc = update_factors(ψAψ_bpc, vertices_states)
-    ψ[v] = state
+        v_ket, v_bra = (v, "ket"), (v, "bra")
+        pv = only(partitionvertices(ψAψ_bpc, [v_ket]))
+        vn = region_scalar(ψAψ_bpc, pv)
+
+        # avoid numerical issues with negative vertex norm
+        vertex_normalization = sqrt(sf * abs(vn))
+        state = copy(ψψ[v_ket]) / (sign(vn) * vertex_normalization)
+        state_dag = copy(ψψ[v_bra]) / vertex_normalization
+        vertices_states = Dictionary([v_ket, v_bra], [state, state_dag])
+        ψAψ_bpc = update_factors(ψAψ_bpc, vertices_states)
+        ψ[v] = state
     end
 
     return ψ, ψAψ_bpc
@@ -150,12 +157,12 @@ function normalize_messages(bp_cache::BeliefPropagationCache, pes::Vector{<:Part
     bp_cache = copy(bp_cache)
     mts = messages(bp_cache)
     for pe in pes
-      me, mer = only(mts[pe]), only(mts[reverse(pe)])
-      set!(mts, pe, ITensor[me / norm(me)])
-      set!(mts, reverse(pe), ITensor[mer / norm(mer)])
-      n = region_scalar(bp_cache, pe)
-      set!(mts, pe, ITensor[(1 / (sign(n)*sqrt(abs(n)))) * me])
-      set!(mts, reverse(pe), ITensor[(1 / (sqrt(abs(n)))) * mer])
+        me, mer = only(mts[pe]), only(mts[reverse(pe)])
+        set!(mts, pe, ITensor[me/norm(me)])
+        set!(mts, reverse(pe), ITensor[mer/norm(mer)])
+        n = region_scalar(bp_cache, pe)
+        set!(mts, pe, ITensor[(1/(sign(n)*sqrt(abs(n))))*me])
+        set!(mts, reverse(pe), ITensor[(1/(sqrt(abs(n))))*mer])
     end
     return bp_cache
 end
@@ -168,39 +175,49 @@ function normalize_messages(bp_cache::BeliefPropagationCache)
     return normalize_messages(bp_cache, partitionedges(partitioned_tensornetwork(bp_cache)))
 end
 
+function ITensorNetworks.region_scalar(bp_cache::BeliefPropagationCache, verts::Vector)
+    partitions = partitionvertices(bp_cache, verts)
+    length(partitions) == 1 && return region_scalar(bp_cache, only(partitions))
+    if length(partitions) == 2
+        p1, p2 = first(partitions), last(partitions)
+        if parent(p1) ∉ neighbors(partitioned_graph(bp_cache), parent(p2))
+            error("Only contractions involving neighboring partitions are currently supported")
+        end
+        ms = incoming_messages(bp_cache, partitions)
+        local_tensors = factors(bp_cache, partitions)
+        ts = [ms; local_tensors]
+        seq = contraction_sequence(ts; alg="optimal")
+        return contract(ts; sequence=seq)[]
+    end
+    error("Contractions involving more than 2 partitions not currently supported")
+    return nothing
+end
 
-function ITensors.scalar(bp_cache::AbstractBeliefPropagationCache, args...; alg = "bp", kwargs...)
+function ITensors.scalar(bp_cache::AbstractBeliefPropagationCache, args...; alg="bp", kwargs...)
     return scalar(Algorithm(alg), bp_cache, args...; kwargs...)
 end
-  
+
 function ITensors.scalar(alg::Algorithm"bp", bp_cache::AbstractBeliefPropagationCache)
     numers, denoms = scalar_factors_quotient(bp_cache)
-    isempty(denoms) && return prod(numers)
+    if isempty(denoms)
+        return prod(numers)
+    end
     return prod(numers) / prod(denoms)
 end
-  
-function ITensors.scalar(alg::Algorithm"loopcorrections", bp_cache::AbstractBeliefPropagationCache; normalize_cache = true, max_configuration_size::Int64)
-    bp_cache = normalize_messages(bp_cache)
-    zbp = scalar(bp_cache; alg = "bp")
-    bp_cache = normalize_cache ? normalize(bp_cache) : bp_cache
-    egs = edgeinduced_subgraphs_no_leaves(partitioned_graph(bp_cache), max_configuration_size)
-    isempty(egs) && return zbp
-    ws = weights(bp_cache, egs)
-    return zbp*(1 + sum(ws))
-end
+
 
 """Bipartite entanglement entropy, estimated as the spectrum of the bond tensor on the bipartition edge."""
 function entanglement(
-  ψ::ITensorNetwork, e::NamedEdge; (cache!)=nothing, cache_update_kwargs=get_global_bp_update_kwargs()
+    ψ::ITensorNetwork, e::NamedEdge; (cache!)=nothing, cache_update_kwargs=get_global_bp_update_kwargs()
 )
-  cache = isnothing(cache!) ? build_bp_cache(ψ; cache_update_kwargs...) : cache![]
-  ψ_vidal = VidalITensorNetwork(ψ; cache)
-  bt = bond_tensor(ψ_vidal, e)
-  ee = 0
-  for d in diag(bt)
-    ee -= abs(d) >= eps(eltype(bt)) ? d * d * log2(d * d) : 0
-  end
-  return abs(ee)
+    cache = isnothing(cache!) ? build_bp_cache(ψ; cache_update_kwargs...) : cache![]
+    ψ_vidal = VidalITensorNetwork(ψ; cache)
+    bt = bond_tensor(ψ_vidal, e)
+    ee = 0
+    for d in diag(bt)
+        ee -= abs(d) >= eps(eltype(bt)) ? d * d * log2(d * d) : 0
+    end
+    return abs(ee)
 end
 
 
@@ -212,20 +229,3 @@ function make_eigs_positive(A::ITensor, tol::Real=1e-14)
     return map_eigvals(x -> max(x, tol), A, first(inds(A)), last(inds(A)); ishermitian=true)
 end
 
-function ITensorNetworks.region_scalar(bpc::BeliefPropagationCache, verts::Vector)
-    partitions = partitionvertices(bpc, verts)
-    length(partitions) == 1 && return region_scalar(bpc, only(partitions))
-    if length(partitions) == 2
-      p1, p2 = first(partitions), last(partitions)
-      if parent(p1) ∉ neighbors(partitioned_graph(bpc), parent(p2))
-        error("Only contractions involving neighboring partitions are currently supported")
-      end
-      ms = incoming_messages(bpc, partitions)
-      local_tensors = factors(bpc, partitions)
-      ts = [ms; local_tensors]
-      seq = contraction_sequence(ts; alg = "optimal")
-      return contract(ts; sequence = seq)[]
-    end
-    error("Contractions involving more than 2 partitions not currently supported")
-    return nothing
-end

@@ -48,7 +48,7 @@ end
 function build_boundarymps_cache(
     ψ::AbstractITensorNetwork,
     message_rank::Int64;
-    cache_construction_kwargs = (;),
+    cache_construction_kwargs=(;),
     boundary_mps_kwargs...
 )
     # # update the cache later unless we are in symmetric gauge
@@ -72,7 +72,7 @@ function build_boundarymps_cache(
     ψIψ::AbstractBeliefPropagationCache,
     message_rank::Int64;
     update_cache=true,
-    cache_construction_kwargs = (;),
+    cache_construction_kwargs=(;),
     boundary_mps_kwargs...
 )
 
@@ -702,7 +702,9 @@ end
 
 function ITensorNetworks.region_scalar(bmpsc::BoundaryMPSCache, verts::Vector)
     partitions = planargraph_partitions(bmpsc, parent.(partitionvertices(bmpsc, verts)))
-    length(partitions) == 1 && return region_scalar(bmpsc, only(partitions))
+    if length(partitions) == 1
+        return region_scalar(bmpsc, only(partitions))
+    end
     error("Contractions involving more than 1 partition not currently supported")
 end
 

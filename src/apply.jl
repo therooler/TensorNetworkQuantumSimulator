@@ -3,7 +3,7 @@
 # What about normalization?
 # How do we handle the BP cache? Build a new object that has both?
 
-const _default_apply_kwargs = (maxdim=Inf, cutoff=1e-10, normalize=true, use_relative_cutoff = true)
+const _default_apply_kwargs = (maxdim=Inf, cutoff=1e-10, normalize=true, use_relative_cutoff=true)
 
 # import ITensorNetworks.apply for less clutter down below
 # import ITensors.apply
