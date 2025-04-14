@@ -43,7 +43,12 @@ function updatecache(bp_cache::AbstractBeliefPropagationCache; bp_update_kwargs.
 end
 
 
-function build_bp_cache(ψ::AbstractITensorNetwork, args...; update_cache=true, bp_update_kwargs...)
+function build_bp_cache(
+    ψ::AbstractITensorNetwork,
+    args...;
+    update_cache = true,
+    bp_update_kwargs...,
+)
     bp_cache = BeliefPropagationCache(QuadraticFormNetwork(ψ), args...)
     # TODO: QuadraticFormNetwork() builds ψIψ network, but for Pauli picture `norm_sqr_network()` is enough
     # https://github.com/ITensor/ITensorNetworks.jl/blob/main/test/test_belief_propagation.jl line 49 to construct the cache without the identities.
@@ -184,7 +189,12 @@ function normalize_messages(bp_cache::BeliefPropagationCache)
 end
 
 
-function ITensors.scalar(bp_cache::AbstractBeliefPropagationCache, args...; alg = "bp", kwargs...)
+function ITensors.scalar(
+    bp_cache::AbstractBeliefPropagationCache,
+    args...;
+    alg = "bp",
+    kwargs...,
+)
     return scalar(Algorithm(alg), bp_cache, args...; kwargs...)
 end
 

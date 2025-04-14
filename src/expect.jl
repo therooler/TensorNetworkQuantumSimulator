@@ -54,7 +54,6 @@ function ITensorNetworks.expect(
     ),
     kwargs...,
 )
-)
     ψIψ = QuadraticFormNetwork(ψ)
     if isnothing(cache!)
         cache! = Ref(cache(alg, ψIψ; cache_construction_kwargs...))
@@ -104,7 +103,6 @@ function ITensorNetworks.expect(
     obs::Tuple;
     update_cache=false,
     kwargs...,
-)
 )
 
     op_strings, vs, coeff = collectobservable(obs)
@@ -157,7 +155,6 @@ function collectobservable(obs::Tuple)
     op_vec = [string(o) for o in op]
     qinds_vec = _tovec(qinds)
     return op_vec, qinds_vec, coeff
-end
 end
 
 _tovec(qinds) = vec(collect(qinds))

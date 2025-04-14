@@ -17,7 +17,7 @@ function main()
     g = named_grid((nx, ny, nz); periodic = true)
 
     nqubits = length(vertices(g))
-    s = siteinds("S=1/2", g)
+    s = ITN.siteinds("S=1/2", g)
     ψ = ITensorNetwork(v -> "Z+", s)
 
     maxdim, cutoff = 4, 1e-14

@@ -11,10 +11,11 @@ function zerostate(g::NamedGraph; pauli_basis = false)
 end
 
 function zerostate(indices::IndsNetwork)
-    d = getphysicaldim(indices)
-    if d == 2
+    inds = reduce(vcat, [indices[v] for v in vertices(indices)])
+    dims = dim.(inds)
+    if all(d -> d== 2, dims)
         return ITensorNetwork(v -> [1.0, 0.0], indices)
-    elseif d == 4
+    elseif all(d -> d== 4, dims)
         return ITensorNetwork(v -> [1.0, 0.0, 0.0, 1.0], indices)
     else
         throw(ArgumentError("Only physical dimensions 2 and 4 are supported."))
