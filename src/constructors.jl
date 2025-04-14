@@ -1,7 +1,7 @@
 const stringtointmap = Dict("I" => 1, "X" => 2, "Y" => 3, "Z" => 4)
 
 
-function zerostate(g::NamedGraph; pauli_basis=false)
+function zerostate(g::NamedGraph; pauli_basis = false)
     if !pauli_basis
         # the most common case 
         return zerostate(siteinds("Qubit", g))
@@ -11,10 +11,11 @@ function zerostate(g::NamedGraph; pauli_basis=false)
 end
 
 function zerostate(indices::IndsNetwork)
-    d = getphysicaldim(indices)
-    if d == 2
+    inds = reduce(vcat, [indices[v] for v in vertices(indices)])
+    dims = dim.(inds)
+    if all(d -> d== 2, dims)
         return ITensorNetwork(v -> [1.0, 0.0], indices)
-    elseif d == 4
+    elseif all(d -> d== 4, dims)
         return ITensorNetwork(v -> [1.0, 0.0, 0.0, 1.0], indices)
     else
         throw(ArgumentError("Only physical dimensions 2 and 4 are supported."))
@@ -46,7 +47,11 @@ function topaulitensornetwork(op, tninds::IndsNetwork)
     all_inds = vertices(tninds)
     for ind in op_inds
         if !(ind in all_inds)
-            throw(ArgumentError("Index $ind of the operator is not in the IndsNetwork $tninds."))
+            throw(
+                ArgumentError(
+                    "Index $ind of the operator is not in the IndsNetwork $tninds.",
+                ),
+            )
         end
     end
 
