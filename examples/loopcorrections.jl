@@ -17,33 +17,40 @@ using Random
 Random.seed!(1634)
 
 function main()
-  nx, ny = 5,5
-  χ =3
-  ITensors.disable_warn_order()
-  bp_update_kwargs = (; maxiter=40, tol=1e-12, message_update_kwargs = (; message_update_function = ms -> make_eigs_real.(default_message_update(ms))))
-  gs = [
-    (named_grid((nx, 1)), "line", 0),
-    (named_hexagonal_lattice_graph(nx, ny), "hexagonal", 6),
-    (named_grid((nx, ny)), "square", 4),
-  ]
-  for (g, g_str, smallest_loop_size) in gs
-    println("Testing for $g_str lattice with $(NG.nv(g)) vertices")
-    s = siteinds("S=1/2", g)
-    ψ = ITN.random_tensornetwork(ComplexF64, s; link_space=χ)
-    s = ITN.siteinds(ψ)
-    v_centre = first(G.center(g))
-    vn = first(neighbors(g, v_centre))
+    nx, ny = 5, 5
+    χ = 3
+    ITensors.disable_warn_order()
+    gs = [
+        (named_grid((nx, 1)), "line", 0),
+        (named_hexagonal_lattice_graph(nx, ny), "hexagonal", 6),
+        (named_grid((nx, ny)), "square", 4),
+    ]
+    for (g, g_str, smallest_loop_size) in gs
+        println("Testing for $g_str lattice with $(NG.nv(g)) vertices")
+        s = siteinds("S=1/2", g)
+        ψ = ITN.random_tensornetwork(ComplexF64, s; link_space = χ)
+        s = ITN.siteinds(ψ)
 
-    ψ, ψIψ = normalize(ψ)
+        ψ, ψIψ = normalize(ψ)
 
-    norm_sqr_bp = inner(ψ, ψ; alg = "loopcorrections", max_configuration_size = 0)
-    norm_sqr = inner(ψ, ψ; alg = "loopcorrections", max_configuration_size = 2*(smallest_loop_size) - 1)
-    norm_sqr_exact = inner(ψ, ψ; alg = "exact", contraction_sequence_kwargs = (; alg="einexpr", optimizer=Greedy()))
+        norm_sqr_bp = inner(ψ, ψ; alg = "loopcorrections", max_configuration_size = 0)
+        norm_sqr = inner(
+            ψ,
+            ψ;
+            alg = "loopcorrections",
+            max_configuration_size = 2*(smallest_loop_size) - 1,
+        )
+        norm_sqr_exact = inner(
+            ψ,
+            ψ;
+            alg = "exact",
+            contraction_sequence_kwargs = (; alg = "einexpr", optimizer = Greedy()),
+        )
 
-    println("Bp Value for norm is $norm_sqr_bp")
-    println("1st Order Loop Corrected Value for norm is $norm_sqr")
-    println("Exact Value for norm is $norm_sqr_exact")
-  end
+        println("Bp Value for norm is $norm_sqr_bp")
+        println("1st Order Loop Corrected Value for norm is $norm_sqr")
+        println("Exact Value for norm is $norm_sqr_exact")
+    end
 end
 
 main()

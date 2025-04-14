@@ -22,9 +22,9 @@ function main()
 
     # pauli rotations are tuples like `(pauli_string, [site_labels], parameter)`
     layer = []
-    append!(layer, ("X", [v], 2*hx*dt) for v in vertices(g))
-    append!(layer, ("Z", [v], 2*hz*dt) for v in vertices(g))
-    append!(layer, ("ZZ", pair, 2*J*dt) for pair in edges(g));
+    append!(layer, ("Rx", [v], 2*hx*dt) for v in vertices(g))
+    append!(layer, ("Rz", [v], 2*hz*dt) for v in vertices(g))
+    append!(layer, ("Rzz", pair, 2*J*dt) for pair in edges(g));
 
     # observables are tuples like `(pauli_string, [site_labels], optional:coefficient)`
     # it's important that the `site_labels` match the names of the vertices of the graph `g`
@@ -41,10 +41,10 @@ function main()
 
     # max bond dimension for the TN
     # we will use enough and just see how
-    apply_kwargs = (maxdim=5, cutoff=1e-10, normalize=false)
+    apply_kwargs = (maxdim = 5, cutoff = 1e-10, normalize = false)
 
     # evolve! The first evaluation will take significantly longer because of compilation.
-    for l in 1:nl
+    for l = 1:nl
         #printing
         println("Layer $l")
 
@@ -64,8 +64,10 @@ function main()
     # we will still do exactly the same evolution but also do boundary mps for expectation values
 
     # these kwargs are used every time the BP is updated, but you can pass other kwargs to individual functions 
-    set_global_bp_update_kwargs!(maxiter=25, tol=1e-6)
-    set_global_boundarymps_update_kwargs!(message_update_kwargs = (; niters = 20, tolerance = 1e-10))
+    set_global_bp_update_kwargs!(maxiter = 25, tol = 1e-6)
+    set_global_boundarymps_update_kwargs!(
+        message_update_kwargs = (; niters = 20, tolerance = 1e-10),
+    )
 
     # the initial state
     ψ = zerostate(g)
@@ -78,21 +80,32 @@ function main()
     boundarymps_rank = 4
 
     # evolve! The first evaluation will take significantly longer because of compulation.
-    for l in 1:nl
+    for l = 1:nl
         println("Layer $l")
 
         # pass BP cache manually
         # only update cache every `update_every` overlapping 2-qubit gates
-        t1 = @timed ψ, ψψ, errors = apply(layer, ψ, ψψ; apply_kwargs, update_every=1, verbose=false);
-        
+        t1 = @timed ψ, ψψ, errors =
+            apply(layer, ψ, ψψ; apply_kwargs, update_every = 1, verbose = false);
+
         ## could also update outside 
         # t2 = @timed ψψ = updatecache(ψψ)
 
         # push expectation to list
         # pass the cache instead of the state so that things don't have to update over and over
-        push!(expectations_advanced, real(expect(ψ, obs; alg = "boundarymps", cache_construction_kwargs =(; message_rank = boundarymps_rank))))  # with some boundary mps correction
+        push!(
+            expectations_advanced,
+            real(
+                expect(
+                    ψ,
+                    obs;
+                    alg = "boundarymps",
+                    cache_construction_kwargs = (; message_rank = boundarymps_rank),
+                ),
+            ),
+        )  # with some boundary mps correction
 
-        
+
         println("    Took time: $(t1.time) [s]. Max bond dimension: $(maxlinkdim(ψ))")
         println("    Maximum Gate error for layer was $(maximum(errors))")
     end

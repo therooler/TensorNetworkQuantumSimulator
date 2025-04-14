@@ -4,43 +4,62 @@ using StatsBase
 function StatsBase.sample(
     ψ::ITensorNetwork,
     nsamples::Int64;
-    left_message_rank::Int64=maxlinkdim(ψ),
+    left_message_rank::Int64 = maxlinkdim(ψ),
     right_message_rank::Int64,
-    message_update_kwargs=(; niters=40, tolerance=1e-12),
-    use_symmetric_gauge=true,
+    message_update_kwargs = (; niters = 40, tolerance = 1e-12),
+    use_symmetric_gauge = true,
     kwargs...,
 )
     #WARMUP: Run boundary MPS from the right to the left with right_mps_rank dimensions messages
-    bp_update_kwargs = (; maxiter=40, tol=1e-12, message_update_kwargs=(; message_update_function=ms -> make_eigs_real.(default_message_update(ms))))
+    bp_update_kwargs = (;
+        maxiter = 40,
+        tol = 1e-12,
+        message_update_kwargs = (;
+            message_update_function = ms -> make_eigs_real.(default_message_update(ms))
+        ),
+    )
     if use_symmetric_gauge
-        ψ, ψIψ_bpc = symmetric_gauge(ψ; cache_update_kwargs=bp_update_kwargs)
+        ψ, ψIψ_bpc = symmetric_gauge(ψ; cache_update_kwargs = bp_update_kwargs)
     else
         ψIψ_bpc = build_bp_cache(ψ; bp_update_kwargs...)
     end
-    ψ, ψIψ_bpc = normalize(ψ, ψIψ_bpc; update_cache=false)
-    ψIψ = BoundaryMPSCache(ψIψ_bpc; message_rank=right_message_rank)
+    ψ, ψIψ_bpc = normalize(ψ, ψIψ_bpc; update_cache = false)
+    ψIψ = BoundaryMPSCache(ψIψ_bpc; message_rank = right_message_rank)
     sorted_partitions = sort(ITensorNetworks.partitions(ψIψ))
-    seq = [sorted_partitions[i] => sorted_partitions[i-1] for i in length(sorted_partitions):-1:2]
+    seq = [
+        sorted_partitions[i] => sorted_partitions[i-1] for
+        i = length(sorted_partitions):-1:2
+    ]
     ψIψ = update(Algorithm("orthogonal"), ψIψ, seq; message_update_kwargs...)
 
-    pψ = BoundaryMPSCache(ψ; message_rank=left_message_rank)
-    left_message_update_kwargs = (; message_update_kwargs..., normalize=false)
+    pψ = BoundaryMPSCache(ψ; message_rank = left_message_rank)
+    left_message_update_kwargs = (; message_update_kwargs..., normalize = false)
 
     #Generate the bit_strings moving left to right through the network
     bit_strings = []
-    for j in 1:nsamples
+    for j = 1:nsamples
         ψIψ_j = copy(ψIψ)
         left_incoming_message = nothing
         bit_string = Dictionary{keytype(vertices(ψ)),Int}()
         p_over_q = nothing
         for (i, partition) in enumerate(sorted_partitions)
-            next_partition = i != length(sorted_partitions) ? sorted_partitions[i+1] : nothing
-            ψIψ_j, p_over_q, bit_string, = sample_partition(ψIψ_j, partition, bit_string; kwargs...)
+            next_partition =
+                i != length(sorted_partitions) ? sorted_partitions[i+1] : nothing
+            ψIψ_j, p_over_q, bit_string, =
+                sample_partition(ψIψ_j, partition, bit_string; kwargs...)
             vs = planargraph_vertices(ψIψ, partition)
-            pψ = update_factors(pψ, Dict(zip(vs, [only(factors(ψIψ_j, [(v, "ket")])) for v in vs])))
+            pψ = update_factors(
+                pψ,
+                Dict(zip(vs, [only(factors(ψIψ_j, [(v, "ket")])) for v in vs])),
+            )
             if !isnothing(next_partition)
                 ms = messages(ψIψ_j)
-                pψ = update(Algorithm("orthogonal"), pψ, partition => next_partition; left_message_update_kwargs...)
+                pψ = update(
+                    Algorithm("orthogonal"),
+                    pψ,
+                    partition => next_partition;
+                    left_message_update_kwargs...,
+                )
                 pes = planargraph_sorted_partitionedges(ψIψ_j, partition => next_partition)
                 for pe in pes
                     m = only(message(pψ, pe))
@@ -52,7 +71,8 @@ function StatsBase.sample(
         push!(bit_strings, ((p_over_q), bit_string))
     end
     norm = sum(first.(bit_strings)) / length(bit_strings)
-    bit_strings = [((p_over_q) / norm, bit_string) for (p_over_q, bit_string) in bit_strings]
+    bit_strings =
+        [((p_over_q) / norm, bit_string) for (p_over_q, bit_string) in bit_strings]
     return bit_strings
 end
 
@@ -66,8 +86,10 @@ function sample_partition(
     vs = sort(planargraph_vertices(ψIψ, partition))
     prev_v, traces = nothing, []
     for v in vs
-        ψIψ = !isnothing(prev_v) ? partition_update(ψIψ, [prev_v], [v]) : partition_update(ψIψ, [v])
-        ρ = contract(environment(bp_cache(ψIψ), [(v, "operator")]); sequence="automatic")
+        ψIψ =
+            !isnothing(prev_v) ? partition_update(ψIψ, [prev_v], [v]) :
+            partition_update(ψIψ, [v])
+        ρ = contract(environment(bp_cache(ψIψ), [(v, "operator")]); sequence = "automatic")
         ρ_tr = tr(ρ)
         push!(traces, ρ_tr)
         ρ /= ρ_tr

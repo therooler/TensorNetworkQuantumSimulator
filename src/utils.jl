@@ -29,7 +29,7 @@ function trace(Q::ITensorNetwork)
         throwdimensionerror()
     end
 
-    val = ITensorNetworks.inner(ITensorNetwork(v -> vec, siteinds(Q)), Q; alg="bp")
+    val = ITensorNetworks.inner(ITensorNetwork(v -> vec, siteinds(Q)), Q; alg = "bp")
     return val
 end
 
@@ -47,23 +47,12 @@ function get_global_cache_update_kwargs(alg::Algorithm)
     error("No update parameters known for that algorithm")
 end
 
-function ITensors.scalar(
-    alg::Algorithm"loopcorrections",
-    tn::AbstractITensorNetwork;
-    max_configuration_size::Int64,
-    (cache!)=nothing,
-    cache_construction_kwargs=default_cache_construction_kwargs(Algorithm("bp"), tn),
-    update_cache=isnothing(cache!),
-    cache_update_kwargs=default_cache_update_kwargs(Algorithm("bp")),
-  )
-    if isnothing(cache!)
-      cache! = Ref(cache(Algorithm("bp"), tn; cache_construction_kwargs...))
-    end
-  
-    if update_cache
-      cache![] = update(cache![]; cache_update_kwargs...)
-    end
-  
-    return scalar(cache![]; alg, max_configuration_size)
-  end
+function ITensorNetworks.truncate(
+    ψ::ITensorNetwork;
+    cache_update_kwargs = get_global_bp_update_kwargs(),
+    kwargs...,
+)
+    ψ_vidal = VidalITensorNetwork(ψ; cache_update_kwargs, kwargs...)
+    return ITensorNetwork(ψ_vidal)
+end
 # 

@@ -6,7 +6,16 @@ using Dictionaries: Dictionary, set!
 using Graphs: simplecycles_limited_length, has_edge, SimpleGraph, center, steiner_tree
 
 using NamedGraphs
-using NamedGraphs: AbstractNamedGraph, AbstractGraph, position_graph, rename_vertices, edges, vertextype, add_vertex!, neighbors, edgeinduced_subgraphs_no_leaves
+using NamedGraphs:
+    AbstractNamedGraph,
+    AbstractGraph,
+    position_graph,
+    rename_vertices,
+    edges,
+    vertextype,
+    add_vertex!,
+    neighbors,
+    edgeinduced_subgraphs_no_leaves
 using NamedGraphs.GraphsExtensions:
     src,
     dst,
@@ -27,10 +36,14 @@ using NamedGraphs.GraphsExtensions:
     add_edges,
     rem_vertices
 
-using NamedGraphs.PartitionedGraphs: PartitionedGraphs, partitioned_vertices, partitionedges, unpartitioned_graph, which_partition
+using NamedGraphs.PartitionedGraphs:
+    PartitionedGraphs,
+    partitioned_vertices,
+    partitionedges,
+    unpartitioned_graph,
+    which_partition
 
-using NamedGraphs.NamedGraphGenerators:
-    named_grid, named_hexagonal_lattice_graph
+using NamedGraphs.NamedGraphGenerators: named_grid, named_hexagonal_lattice_graph
 
 using SimpleGraphConverter: UG
 using SimpleGraphAlgorithms
@@ -74,7 +87,6 @@ using ITensorNetworks:
     partitionedge,
     messages,
     update_factor,
-    default_message_update,
     partitioned_tensornetwork,
     tensornetwork,
     operator_vertex,
@@ -99,6 +111,7 @@ using ITensorNetworks:
     edge_tag,
     default_edge_sequence,
     default_bp_maxiter,
+    default_message_update,
     # update_message,
     tree_orthogonalize,
     gauge_walk,
@@ -114,4 +127,3 @@ using EinExprs: Greedy
 
 import PauliPropagation
 const PP = PauliPropagation
-

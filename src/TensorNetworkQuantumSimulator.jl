@@ -20,8 +20,7 @@ include("expect.jl")
 include("sample.jl")
 
 
-export
-    updatecache,
+export updatecache,
     build_bp_cache,
     vertices,
     edges,
@@ -39,6 +38,7 @@ export
     fidelity,
     fidelity_boundarymps,
     fidelity_loopcorrect,
+    make_eigs_real,
     build_boundarymps_cache,
     truncate,
     maxlinkdim,

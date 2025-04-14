@@ -1,7 +1,7 @@
 const stringtointmap = Dict("I" => 1, "X" => 2, "Y" => 3, "Z" => 4)
 
 
-function zerostate(g::NamedGraph; pauli_basis=false)
+function zerostate(g::NamedGraph; pauli_basis = false)
     if !pauli_basis
         # the most common case 
         return zerostate(siteinds("Qubit", g))
@@ -46,7 +46,11 @@ function topaulitensornetwork(op, tninds::IndsNetwork)
     all_inds = vertices(tninds)
     for ind in op_inds
         if !(ind in all_inds)
-            throw(ArgumentError("Index $ind of the operator is not in the IndsNetwork $tninds."))
+            throw(
+                ArgumentError(
+                    "Index $ind of the operator is not in the IndsNetwork $tninds.",
+                ),
+            )
         end
     end
 

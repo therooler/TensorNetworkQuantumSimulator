@@ -3,7 +3,8 @@
 # What about normalization?
 # How do we handle the BP cache? Build a new object that has both?
 
-const _default_apply_kwargs = (maxdim=Inf, cutoff=1e-10, normalize=true, use_relative_cutoff = true)
+const _default_apply_kwargs =
+    (maxdim = Inf, cutoff = 1e-10, normalize = true, use_relative_cutoff = true)
 
 # import ITensorNetworks.apply for less clutter down below
 # import ITensors.apply
@@ -13,8 +14,8 @@ const _default_apply_kwargs = (maxdim=Inf, cutoff=1e-10, normalize=true, use_rel
 function ITensors.apply(
     circuit::AbstractVector,
     ψ::ITensorNetwork;
-    bp_update_kwargs=get_global_bp_update_kwargs(),
-    kwargs...
+    bp_update_kwargs = get_global_bp_update_kwargs(),
+    kwargs...,
 )
     ψψ = build_bp_cache(ψ; bp_update_kwargs...)
     ψ, ψψ, truncation_errors = apply(circuit, ψ, ψψ; kwargs...)
@@ -27,7 +28,7 @@ function ITensors.apply(
     circuit::AbstractVector,
     ψ::ITensorNetwork,
     ψψ::BeliefPropagationCache;
-    kwargs...
+    kwargs...,
 )
     circuit = toitensor(circuit, siteinds(ψ))
     return apply(circuit, ψ, ψψ; kwargs...)
@@ -38,10 +39,10 @@ function ITensors.apply(
     circuit::AbstractVector{<:ITensor},
     ψ::ITensorNetwork,
     ψψ::BeliefPropagationCache;
-    apply_kwargs=_default_apply_kwargs,
-    bp_update_kwargs=get_global_bp_update_kwargs(),
-    update_every=1,
-    verbose=false
+    apply_kwargs = _default_apply_kwargs,
+    bp_update_kwargs = get_global_bp_update_kwargs(),
+    update_every = 1,
+    verbose = false,
 )
 
     # merge all the kwargs with the defaults 
@@ -61,13 +62,16 @@ function ITensors.apply(
         t = @timed ψ, ψψ, truncation_errors[ii] = apply(gate, ψ, ψψ; apply_kwargs)
 
         if verbose
-            println("Gate $ii:    Simulation time: $(t.time) secs,    Max χ: $(maxlinkdim(ψ)),     Error: $(truncation_errors[ii])")
+            println(
+                "Gate $ii:    Simulation time: $(t.time) secs,    Max χ: $(maxlinkdim(ψ)),     Error: $(truncation_errors[ii])",
+            )
         end
 
         # TODO: the update should actual happen before the gate is applied
         # check if the gate is a 2-qubit gate and whether it affects the counter
         # we currently only increment the counter if the gate affects vertices that have already been affected
-        counter, affected_vertices = _check_and_update_counter(counter, affected_vertices, gate)
+        counter, affected_vertices =
+            _check_and_update_counter(counter, affected_vertices, gate)
 
         # update the BP cache
         if (counter > 0) && (counter % update_every == 0)
@@ -94,17 +98,29 @@ end
 function ITensors.apply(
     gate::Tuple,
     ψ::ITensorNetwork;
-    apply_kwargs=_default_apply_kwargs,
-    bp_update_kwargs=get_global_bp_update_kwargs()
+    apply_kwargs = _default_apply_kwargs,
+    bp_update_kwargs = get_global_bp_update_kwargs(),
 )
-    ψ, ψψ, truncation_error = apply(gate, ψ, build_bp_cache(ψ; bp_update_kwargs...); apply_kwargs)
+    ψ, ψψ, truncation_error =
+        apply(gate, ψ, build_bp_cache(ψ; bp_update_kwargs...); apply_kwargs)
     # because the cache is not passed, we return the state only
     return ψ, truncation_error
 end
 
 # gate apply function for tuple gates. The gate gets converted to an ITensor first.
-function ITensors.apply(gate::Tuple, ψ::ITensorNetwork, ψψ::BeliefPropagationCache; apply_kwargs=_default_apply_kwargs)
-    return apply(toitensor(gate, siteinds(ψ)), ψ, ψψ; reset_all_messages=false, apply_kwargs)
+function ITensors.apply(
+    gate::Tuple,
+    ψ::ITensorNetwork,
+    ψψ::BeliefPropagationCache;
+    apply_kwargs = _default_apply_kwargs,
+)
+    return apply(
+        toitensor(gate, siteinds(ψ)),
+        ψ,
+        ψψ;
+        reset_all_messages = false,
+        apply_kwargs,
+    )
 end
 
 
@@ -112,8 +128,8 @@ function ITensors.apply(
     gate::ITensor,
     ψ::AbstractITensorNetwork,
     ψψ::BeliefPropagationCache;
-    reset_all_messages=false,
-    apply_kwargs=_default_apply_kwargs,
+    reset_all_messages = false,
+    apply_kwargs = _default_apply_kwargs,
 )
     # TODO: document each line
 
