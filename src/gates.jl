@@ -13,7 +13,7 @@ end
 
 
 function _takes_phi_argument(string::String)
-    return string ∈ ["Rxx", "Ryy", "Rzz"]
+    return string ∈ ["Rxx", "Ryy", "Rzz", "P", "CPHASE"]
 end
 
 # conversion of the tuple gate to an ITensor
