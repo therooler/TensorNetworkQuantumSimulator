@@ -91,6 +91,12 @@ function ITensors.apply(
         end
 
     end
+
+    # Best to do a final update of the cache if the counter is not zero
+    if !iszero(counter)
+        ψψ = updatecache(ψψ; bp_update_kwargs...)
+    end
+
     return ψ, ψψ, truncation_errors
 end
 

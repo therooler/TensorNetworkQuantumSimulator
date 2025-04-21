@@ -8,7 +8,7 @@ function _ispaulistring(string::String)
 end
 
 function _takes_theta_argument(string::String)
-    return string ∈ ["Rx", "Ry", "Rz", "Cx", "Cy", "Cz", "Rxxyy"]
+    return string ∈ ["Rx", "Ry", "Rz", "CRx", "CRy", "CRz", "Rxxyy", "Rxxyyzz"]
 end
 
 
@@ -87,4 +87,18 @@ function ITensors.op(
     mat[3, 2] = -1.0 * im * sin(θ)
     mat[3, 3] = cos(θ)
     return mat
-  end
+end
+
+function ITensors.op(
+    ::OpName"Rxxyyzz", ::SiteType"S=1/2"; θ::Float64
+  )
+    a = exp( im * θ * 0.5)
+    mat = zeros(ComplexF64, 4, 4)
+    mat[1, 1] = conj(a)
+    mat[2, 2] = cos(θ) * a
+    mat[2, 3] = -1.0 * im * a * sin(θ)
+    mat[3, 2] = -1.0 * im * a * sin(θ)
+    mat[3, 3] = cos(θ) * a
+    mat[4,4] = conj(a)
+    return mat
+end
