@@ -20,7 +20,8 @@ include("expect.jl")
 include("sample.jl")
 
 
-export updatecache,
+export
+    updatecache,
     build_bp_cache,
     vertices,
     edges,
@@ -46,7 +47,6 @@ export updatecache,
     edge_color,
     zerostate,
     getnqubits,
-    heavy_hexagonal_lattice_grid,
     named_grid,
     sample
 
